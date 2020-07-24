@@ -2,6 +2,9 @@ package ru.netology.carddelivery;
 
 import com.codeborne.selenide.Condition;
 import com.codeborne.selenide.SelenideElement;
+import com.codeborne.selenide.logevents.SelenideLogger;
+import io.qameta.allure.selenide.AllureSelenide;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import ru.netology.data.DataGenerator;
 import ru.netology.data.UserInfo;
@@ -9,7 +12,6 @@ import ru.netology.data.UserInfo;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import static com.codeborne.selenide.Condition.exactText;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selectors.byText;
 import static com.codeborne.selenide.Selectors.withText;
@@ -17,6 +19,15 @@ import static com.codeborne.selenide.Selenide.*;
 
 public class CardDeliveryFormTest {
     private DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+    @BeforeAll
+    static void setUpAll() {
+        SelenideLogger.addListener("allure", new AllureSelenide());
+    }
+
+    static void tearDownAll() {
+        SelenideLogger.removeListener("allure");
+    }
 
     /*
     data-step value:
@@ -71,30 +82,30 @@ public class CardDeliveryFormTest {
         UserInfo userInfo = DataGenerator.OrderInfo.generateUserInfo("ru");
         open("http://localhost:9999");
 
-        SelenideElement element = $("form");
-        element.$("[data-test-id=city] input").setValue(userInfo.getUserCity().substring(0, 2));
+        SelenideElement form = $("form");
+        form.$("[data-test-id=city] input").setValue(userInfo.getUserCity().substring(0, 2));
         $(byText(userInfo.getUserCity())).click();
-        element.$("[data-test-id=date] input").click();
+        SelenideElement fieldDate = form.$("[data-test-id=date] input");
+        fieldDate.click();
         selectCalendarDate(userInfo.getOrderDate(), LocalDateTime.now());
 
-        element.$("[data-test-id=name] input").setValue(userInfo.getUserName());
-        element.$("[data-test-id=phone] input").setValue(userInfo.getUserPhone());
-        element.$("[data-test-id=agreement]").click();
-        element.$$(".button").find(exactText("Запланировать")).click();
+        form.$("[data-test-id=name] input").setValue(userInfo.getUserName());
+        form.$("[data-test-id=phone] input").setValue(userInfo.getUserPhone());
+        form.$("[data-test-id=agreement]").click();
+        SelenideElement buttonPlan = $(withText("Запланировать"));
+        buttonPlan.click();
 
         $(withText("Успешно!")).waitUntil(visible, 15000);
         $(byText("Встреча успешно запланирована на")).shouldBe(visible);
         $(byText(dateFormat.format(userInfo.getOrderDate()))).shouldBe(visible);
 
-        element.$("[data-test-id=date] input").click();
+        fieldDate.click();
         LocalDateTime reorderDate = DataGenerator.OrderInfo.generateOrderDate("ru");
         selectCalendarDate(reorderDate, userInfo.getOrderDate());
-
-        element.$$("button").find(exactText("Запланировать")).click();
-
+        buttonPlan.click();
         $(withText("Необходимо подтверждение")).waitUntil(visible, 15000);
         $(byText("Перепланировать")).shouldBe(visible);
-        $$(".notification .button").find(exactText("Перепланировать")).click();
+        $(withText("Перепланировать")).click();
         $(withText("Успешно!")).waitUntil(visible, 15000);
         $(byText("Встреча успешно запланирована на")).shouldBe(visible);
         $(byText(dateFormat.format(reorderDate))).shouldBe(visible);
